@@ -134,14 +134,14 @@ module Ydl
     # Extract metadata information for video(s) with given URLs,
     # and iterate over them inside a block.
     #
-    def self.iterate_on_metadata_for(urls = [], output = false, &block)
+    def self.iterate_on_metadata_for(urls = [], &block)
       data    = {}
       urls    = [ urls ].flatten
       count   = urls.count
 
       # capture information received from youtube-dl as json.
       urls.each_with_index do |url, index|
-        meta = Ydl::Wrapper.extract_metadata_for_video url, output
+        meta = Ydl.delegator.extract_metadata_for_video url
 
         if meta
           # extract video's format and dimensions

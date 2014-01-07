@@ -27,6 +27,17 @@ Feature: Add videos to the database
         And   the output should contain "Found 1 existing video"
         And   the output should contain "Added 0 video"
 
+    @slow_process
+    Scenario: Adding multiple videos
+        Given I have initialized Ydl on this system
+        When  I add a video named "phir se, aur ho, tum ho"
+        Then  the output should contain "Adding 3 video"
+        And   the output should contain "Added 3 video"
+        And   the output should contain "Completed: |="
+        And   cache files with metadata for the videos should exist
+        And   the database file for fuzzy matching of videos should exist
+        And   records for the videos should exist in the database
+
     Scenario: With piping support
         Given I have initialized Ydl on this system
         And   I want to pipe the output of next command

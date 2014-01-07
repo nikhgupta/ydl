@@ -15,15 +15,20 @@ require 'ruby-progressbar'
 # along with their progress, as well as allows you to quickly search
 # your local video database using fuzzy matching algorithms.
 #
-module Ydl; end
-Ydl::CONFIG   = Conjuror.new(ENV['ARUBA_TEST'] ? "ydl-test" : "ydl")
-Ydl::DB_FILE  = File.join(Ydl::CONFIG.directory, "database.db")
-Ydl::DATABASE = Sequel.connect("sqlite://#{Ydl::DB_FILE}")
+module Ydl
+  CONFIG   = Conjuror.new(ENV['ARUBA_TEST'] ? "ydl-test" : "ydl")
+  DB_FILE  = File.join(CONFIG.directory, "database.db")
+  DATABASE = Sequel.connect("sqlite://#{DB_FILE}")
+
+  def self.delegator
+    Delegator.instance
+  end
+end
 
 # require internals
 require "ydl/version"
 require "ydl/fuzz_ball"
-require "ydl/wrapper"
+require "ydl/delegator"
 require "ydl/videos"
 require "ydl/house_keeper"
 require "ydl/cli"

@@ -27,6 +27,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'sqlite3'
   spec.add_dependency 'blurrily'
   spec.add_dependency 'conjuror'
+  spec.add_dependency 'ruby-progressbar'
 
   spec.add_development_dependency "pry"
   spec.add_development_dependency "aruba"

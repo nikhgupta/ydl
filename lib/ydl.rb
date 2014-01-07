@@ -5,6 +5,7 @@ require 'sqlite3'
 require 'conjuror'
 require 'fileutils'
 require 'blurrily/map'
+require 'ruby-progressbar'
 
 # SQLite: please, do not load association plugin!
 ::SEQUEL_NO_ASSOCIATIONS = true

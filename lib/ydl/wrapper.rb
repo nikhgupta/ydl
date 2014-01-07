@@ -21,10 +21,11 @@ module Ydl
 
     # Run a command using youtube-dl.
     #
-    def self.run(url = nil, switches = [], options = {})
+    def self.run(url = nil, switches = [], options = {}, suppress_output = false)
       command  = self.path + " " + url.to_s
       options.each { |opt, val| command += " --#{opt.to_s} #{val}" }
       switches.each{ |opt| command += " --#{opt}" }
+      command += " 2>&1 >/dev/null" if suppress_output
       `#{command}`.strip
     end
 
@@ -38,12 +39,12 @@ module Ydl
     # Extract metadata for the video with given url.
     # Note that, this method will cache the json output inside the config dir.
     #
-    def self.extract_metadata_for_video url
+    def self.extract_metadata_for_video url, output = false
       mfile      = self.metadata_file_for(url)
       unless File.file? mfile
         switches = %w[ skip-download write-info-json ignore-errors ]
         options  = { output: mfile.gsub(/\.info\.json$/, '') }
-        output   = self.run url, switches, options
+        output   = self.run url, switches, options, !output # suppress any output
       end
       JSON.parse File.read(mfile) rescue nil
     end

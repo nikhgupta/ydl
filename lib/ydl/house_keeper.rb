@@ -31,6 +31,8 @@ module Ydl
     def upgrade!
       puts "Updating youtube-dl to the latest version.."
       Ydl::Wrapper.run nil, [ "update" ]
+      puts "Preparing fuzzy match database.."
+      Ydl::FuzzBall.prepare
     end
 
     private

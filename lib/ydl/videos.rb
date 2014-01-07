@@ -64,7 +64,7 @@ module Ydl
     # Download fresh metadata for the given urls, and add them to the database.
     #
     def self.add urls
-      iterate_on_metadata_for(urls, true) do |url, meta|
+      iterate_on_metadata_for(urls) do |url, meta|
         Data.upsert meta
       end
 
@@ -127,21 +127,21 @@ module Ydl
       return [ found, matches ]
     end
 
+    def self.filter_out_existing_videos(urls = [])
+      urls -= Data.select(:url).all.map(&:url)
+    end
+
     # Extract metadata information for video(s) with given URLs,
     # and iterate over them inside a block.
     #
-    def self.iterate_on_metadata_for(urls = [], force = false, &block)
+    def self.iterate_on_metadata_for(urls = [], output = false, &block)
       data    = {}
       urls    = [ urls ].flatten
       count   = urls.count
-      Ydl.debug "Found #{urls.count} videos for parsing."
-
-      # only download metadata for videos not already in database
-      urls -= Data.select(:url).all.map(&:url) unless force
 
       # capture information received from youtube-dl as json.
       urls.each_with_index do |url, index|
-        meta = Ydl::Wrapper.extract_metadata_for_video url
+        meta = Ydl::Wrapper.extract_metadata_for_video url, output
 
         if meta
           # extract video's format and dimensions
@@ -180,9 +180,10 @@ module Ydl
             updated_at:     DateTime.now
           }
 
-          yield(url, meta) if block_given?
           data[url] = meta
         end
+
+        yield(url, meta) if block_given?
       end
 
       # no need to remove files from /tmp directory, IMO.

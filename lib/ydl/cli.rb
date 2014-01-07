@@ -124,8 +124,10 @@ module Ydl
     end
 
     desc 'feed [PATH1] [PATH2] [URL]..', "add videos from the given files and supplied urls"
-    method_option :force, type: :boolean, default: false,
-      desc: "Forcefully, refresh new information for videos already in the database."
+    method_option :piped, type: :boolean, default: false,
+      desc: "display progress for all videos separately to enable piping support"
+    method_option :show_output, type: :boolean, default: false,
+      desc: "show output of the youtube-dl program"
     def feed *paths
       urls, added = [], 0
 
@@ -138,20 +140,38 @@ module Ydl
         end
       end
 
-      # insert or update video(s) in the database.
-      Ydl::Videos.iterate_on_metadata_for(urls, options[:force]) do |url, meta|
+      # only download metadata for videos not already in database
+      total    = urls.count
+      urls     = Ydl::Videos.filter_out_existing_videos(urls)
+      existing = total - urls.count
+
+      Ydl.debug "Adding #{total} video(s) in the database."
+      Ydl.debug "Found #{existing} existing video(s) in the database." if existing > 0
+
+      progress = ProgressBar.create({
+        total: total, starting_at: existing,
+        title: "Completed", format: "%a | %b>>%i | %c/%C %t"
+      }) unless options[:piped] || options[:show_output]
+
+      # insert or update video(s) in the database, and
+      # display the progress.
+      Ydl::Videos.iterate_on_metadata_for(urls, options[:show_output]) do |url, meta|
         if meta
-          Ydl.debug "Found metadata for: #{url}"
           Ydl::Videos::Data.upsert meta
+          Ydl.debug "Found metadata for: #{url}" unless progress
           added += 1
         else
-          Ydl.warn "No metadata could be found for: #{url}"
+          Ydl.debug "Could not found metadata for: #{url}" unless progress
         end
+        progress.increment if progress
       end
-      puts "Added #{added} video(s)."
+
+      # display the statistics
+      Ydl.debug "Added #{added} video(s)."
+      Ydl.debug "Discarded #{urls.count - added} video(s)." unless urls.count == added
 
       # re-generate our fuzzy match database.
-      puts "Generating fuzzy match database.."
+      Ydl.debug "Generating fuzzy match database.."
       Ydl::FuzzBall.prepare
     end
 
@@ -162,8 +182,12 @@ module Ydl
     method_option :limit, type: :numeric, default: 10,
       desc: "limit the number of matching results returned by this command (default: 10)"
     def search *keywords
-      matched = Videos.search keywords, options
-      puts matched.inspect
+      matched = Videos.search keywords.join(" "), options
+
+      # display completed items
+      # display queued items
+      # display pending items
+      puts matched[0].map(&:nice_title).join("\n")
     end
 
     default_task :help

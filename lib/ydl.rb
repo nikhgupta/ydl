@@ -38,7 +38,7 @@ class String
   #
   def simple_sanitize(delimiter = " ")
     fn = self.split /(?<=.)\.(?=[^.])(?!.*\.[^.])/m
-    fn.map! { |s| s.gsub /[^a-z0-9\-]+/i, delimiter }
+    fn.map! { |s| s.gsub /[^a-z0-9\-\']+/i, delimiter }
     fn.join(".").downcase.strip
   end
 end

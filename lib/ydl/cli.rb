@@ -1,29 +1,5 @@
 require 'thor'
 
-# Features to be implemented
-# ==========================
-#
-# # Statistics
-# # Tag searches
-# # Series Finder
-# # Duplicate Finder
-# # Multiple download queues
-# # Doownload Folder Organizer
-# # Tagged based Download Queues
-# # Tagged based Download Queues
-# # Better Search Results/Reports
-# # Priority based Download Queues
-# # Search based tag and priority assignment
-# # Tags and priority assignment, when feeding
-
-# Features Completed
-# ==================
-#
-# # Initial Setup
-# # Updating of youtube-dl program.
-# # Adding given urls to the video database.
-# # Fuzzy searching the video database.
-
 module Ydl
   # Class that deals with the CLI interface.
   #
@@ -37,12 +13,13 @@ module Ydl
 
       # ensure that the delegator is ready for a new command
       Ydl.delegator.reset_for_next_command
+      # Ydl::Videos::Data.reload!
 
       # Raise an error unless Ydl has been initialized or the task was not found.
       # FIXME: use dynamic methods, instead!
       subcommand    = args[2][:current_command].name.downcase.to_sym
       safe_commands = [:init, :help]
-      available     = [:update, :feed, :search]
+      available     = [:update, :feed, :search, :download]
       return if safe_commands.include? subcommand
 
       # err out with usage if Ydl has not been initialized
@@ -93,7 +70,7 @@ module Ydl
 
       # oh, yes! I am organized.
       # FIXME: really needed?
-      settings[:classifier]      = "{:extractor}/{:title}-{:id}"
+      settings[:classifier]      = "%(extractor)s/%(title)s-%(id)s-%(hash)s.%(ext)s"
 
       puts
       if house_keeper.compatible?
@@ -157,18 +134,15 @@ module Ydl
         title: "Completed", format: "%a | %b>>%i | %c/%C %t"
       }) unless options[:piped] || options[:verbose]
 
-      # set options for the next delegation
-      Ydl.delegator << [ :verbose ] if options[:verbose]
-
       # insert or update video(s) in the database, and
       # display the progress.
-      Ydl::Videos.iterate_on_metadata_for(urls) do |url, meta|
+      Ydl::Videos.iterate_on_metadata_for(urls, options[:verbose]) do |url, meta|
         if meta
           Ydl::Videos::Data.upsert meta
           Ydl.debug "Found metadata for: #{url}" unless progress
           added += 1
         else
-          Ydl.debug "Could not found metadata for: #{url}" unless progress
+          Ydl.warn "Could not found metadata for: #{url}" unless progress
         end
         progress.increment if progress
       end
@@ -189,13 +163,70 @@ module Ydl
     method_option :limit, type: :numeric, default: 10,
       desc: "limit the number of matching results returned by this command (default: 10)"
     def search *keywords
-      matched = Videos.search keywords.join(" "), options
+      # 1st element: list of songs matching the request
+      # 2nd element: fuzzy matching statistics
+      matched, stats = Ydl::Videos.search keywords, options
 
-      # display completed items
-      # display queued items
-      # display pending items
-      puts matched[0].map(&:nice_title).join("\n")
+      matched.each do |vid|
+        # TODO: convert the following to methods
+        status = (vid.completed ? "C" : "P")
+        file_path = vid.file_path.gsub(Dir.pwd, "./")
+                       .gsub(ENV['HOME'], '~') if vid.completed
+
+        puts "#{"%3d" % vid[:score]} pts : [#{status}] : #{vid.nice_title}"
+        puts "        : #{file_path}" if file_path
+      end
+
+      message = "Displaying a total of #{matched.count} videos."
+      puts "-" * message.length
+      puts message
     end
+
+    desc 'download [PATH1] [PATH2] [URL]..', "download and add videos from the given files and supplied urls"
+    method_option :piped, type: :boolean, default: false,
+      desc: "display progress for all videos separately to enable piping support"
+    def download *paths
+
+      # first, add the videos to the database
+      invoke :feed, paths
+
+      urls, downloaded = [], 0
+
+      # populate the list of urls from files and urls supplied to the command.
+      paths.each do |path|
+        if File.readable?(path)
+          urls |= (File.readlines(path).map(&:strip) rescue [])
+        else # elsif path.url?
+          urls.push path
+        end
+      end
+
+      # only download metadata for videos not already in database
+      total    = urls.count
+      urls     = Ydl::Videos.filter_out_existing_videos(urls, completed: 1)
+      existing = total - urls.count
+
+      Ydl.debug "Downloading #{total} video(s)."
+      Ydl.debug "Found #{existing} existing video(s)." if existing > 0
+
+      # Download the videos so found
+      Ydl::Videos::Data.where(url: urls).each do |video|
+        Ydl.delegator.output = options[:verbose]
+        Ydl.debug "Downloading video: #{video.nice_title}"
+        Ydl.debug "This may take a while.."
+        response = video.download
+        if response.has_key? :file
+          Ydl.debug "Downloaded to: #{video.file_path}"
+          downloaded += 1
+        elsif !options[:verbose] && response[:error]
+          Ydl.warn "\n"+response[:output]
+        end
+      end
+
+      Ydl.debug "Downloaded #{downloaded} video(s)."
+
+    end
+
 
     default_task :help
 

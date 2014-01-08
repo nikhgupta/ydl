@@ -6,7 +6,7 @@ module Ydl
 
     include Singleton
 
-    attr_accessor :args, :switches, :options, :path
+    attr_accessor :args, :switches, :options, :path, :output, :capture
 
     def initialize
       self.detect_program_path
@@ -30,6 +30,7 @@ module Ydl
     #
     def reset_for_next_command
       self.args, self.switches, self.options = [], [], {}
+      self.output, self.capture = false, false
     end
     alias :reset :reset_for_next_command
 
@@ -55,10 +56,17 @@ module Ydl
       command += " \"#{@args.join("\" \"")}\"" if args.any?
       @switches.each{ |opt| command += " --#{opt.to_s}" }
       @options.each { |opt, val| command += " --#{opt.to_s} \"#{val}\"" }
-      command += " 2>&1 >/dev/null" unless @switches.include? :verbose
+      command += " 2>&1"
+      command += " >/dev/null" unless @capture || @output
+
+      output = `#{command}`.strip
+      puts output.gsub(/^/, "          -- ") if @output
+
+      # puts command
+      # puts output
+
       self.reset_for_next_command
-      puts command
-      `#{command}`.strip
+      output
     end
 
     # Path to the file containing the metadata information for the given url.

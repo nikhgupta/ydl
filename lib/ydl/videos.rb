@@ -39,20 +39,52 @@ module Ydl
             end
           end
         end
-
-        # Mark a video as downloaded.
-        #
-        # == Parameters ==
-        # +id+: ID or hash for the given video.
-        #
-        def mark_as_downloaded id
-          record = self[id]
-          record = self.find(hash: id) unless record
-          return nil unless record
-          record.update completed: 1, downloaded_at: DateTime.now
-        end
       end
 
+      # Mark a video as downloaded.
+      #
+      # == Parameters ==
+      # +id+: ID or hash for the given video.
+      #
+      def mark_as_downloaded options = {}
+        options.merge! completed: 1, downloaded_at: DateTime.now
+        self.update options
+      end
+
+      def display_title(length = 50)
+        title  = self.nice_title
+        vidlen = title.length
+        vidlen > length ? title[0,length] + ".." : title + " " * (length + 2 - vidlen)
+      end
+
+      # Download the current video
+      # TODO: Probably: http://bit.ly/1lQpQyF to capture the download progress??
+      #
+      def download
+        classifier = File.join(Ydl::CONFIG[:download_path], replace_ydl_classifiers)
+
+        Ydl.delegator << self.url
+        Ydl.delegator << %w[ ignore-errors no-overwrites continue restrict-filenames no-playlist ]
+        Ydl.delegator << { output: classifier}
+        Ydl.delegator.capture = true
+        data = { output: Ydl.delegator.run }
+
+        filepath = data[:output].match(/^\[.*?\]\s*Destination:\s*(.*?)$/)[1] rescue nil
+        self.mark_as_downloaded file_path: filepath if filepath
+
+        data[:error] = true if !filepath && data[:output].include?("ERROR:")
+        filepath ? {file: filepath} : data
+      end
+
+      # TODO: test this method!
+      def replace_ydl_classifiers
+        str = Ydl::CONFIG[:classifier]
+        str = str.gsub("%(hash)s", self[:hash].to_s)
+                 .gsub("%(width)s", self.width.to_s)
+                 .gsub("%(height)s", self.height.to_s)
+                 .gsub("%(duration)s", self.duration.to_s)
+                 .gsub("%(age_limit)s", self.age_limit.to_s)
+      end
     end
 
     # Create a unique hash from the video's metadata.
@@ -77,7 +109,7 @@ module Ydl
     # If you want to grab an instance of `Sequel::SQLite::Dataset` object,
     # add a `query: true` option to `options`.
     #
-    def self.search keywords = nil, options = {}
+    def self.search keywords = [], options = {}
       found, matches = nil, []
 
       # find the possible filters that the user has passed
@@ -97,9 +129,9 @@ module Ydl
       #
       # get the matching video's data from the database, otherwise if no match
       # was found, match against the whole database.
-      if keywords && found.empty?
+      if keywords.any? && found.empty?
         fuzz_ball = Ydl::FuzzBall.load
-        matches   = fuzz_ball.find keywords, options[:limit]
+        matches   = fuzz_ball.find keywords.join(" "), options[:limit]
         matches.map!{ |m| m.push (m[1]/m[2].to_f * 100).to_i  } if matches.any?
         found = matches.empty? ? Data : Data.with_pk_in(matches.map(&:first))
       end
@@ -109,38 +141,39 @@ module Ydl
         found = found.where(filter => options[filter])
       end
 
-      # now, apply the limit for the number of returned results
-      found = found.limit(options[:limit])
-
-      # load and sort the results from database, now, if the user does not want
-      # an instance of `Sequel::SQLite::Dataset`
-      if !options[:query]
-        found = found.all
-
-        found = found.sort_by do |video|
-          matched, total = matches.detect{|data| data[0] == video.pk}[1,2]
-          video[:match_percent] = (matched/total.to_f * 100).to_i
-        end.reverse if matches.any?
-      end
+      # now, apply the limit for the number of returned results, and
+      # load and sort the results from database
+      found = found.limit(options[:limit]).all
+      found = found.sort_by do |video|
+        score, total = matches.detect{|data| data[0] == video.pk}[1,2] rescue [0,100]
+        density = video.nice_title.split(" ") & keywords
+        score = score + 07 * density.count
+        video[:score] = score
+        # total = 07 * keywords.count
+        # video[:score] = (score/total.to_f * 100).to_i
+      end.reverse
 
       # now, just send the results we found with that much patience.
       return [ found, matches ]
     end
 
-    def self.filter_out_existing_videos(urls = [])
-      urls -= Data.select(:url).all.map(&:url)
+    def self.filter_out_existing_videos(urls = [], conditions = {})
+      urls -= Data.where(conditions).select(:url).all.map(&:url)
     end
 
     # Extract metadata information for video(s) with given URLs,
     # and iterate over them inside a block.
     #
-    def self.iterate_on_metadata_for(urls = [], &block)
+    def self.iterate_on_metadata_for(urls = [], verbose = false, &block)
       data    = {}
       urls    = [ urls ].flatten
       count   = urls.count
 
       # capture information received from youtube-dl as json.
       urls.each_with_index do |url, index|
+
+        # set options for the next delegation
+        Ydl.delegator.output = verbose
         meta = Ydl.delegator.extract_metadata_for_video url
 
         if meta
@@ -188,6 +221,11 @@ module Ydl
 
       # no need to remove files from /tmp directory, IMO.
       data
+    end
+
+    # TODO: method_missing tries any unknown method on the Data class.
+    def method_missing *args
+      raise NoMethodError, "No such method found"
     end
 
   end

@@ -102,8 +102,7 @@ module Ydl
     end
 
     def update
-      self.reset
-      (self << [ "update"]).run
+      self.run "--update"
     end
 
   end

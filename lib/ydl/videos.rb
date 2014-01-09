@@ -116,27 +116,25 @@ module Ydl
       meta
     end
 
-    def self.dimensions meta
+    def self.prepare_hash_from_existing_metadata_attrs meta
       format = meta["format"].match(/\s*(\d+)\s*-\s*(\d+)x(\d+)\s*$/)
       format_id, width, height = format[1,3].map(&:to_i) rescue [0, 0, 0]
-      { format: format_id, width: width, height: height }
-    end
-
-    private_class_method :dimensions
-
-    # prepare metadata for database storage
-    def self.prepare_metadata url, meta
-      data = dimensions(meta)
+      data = { format: format_id, width: width, height: height }
 
       %w[duration age_limit view_count playlist_index].each do |key|
         data[key.to_sym] = meta[key].to_i
       end
-
       %w[playlist uploader uploader_id thumbnail description].each do |key|
         data[key.to_sym] = meta[key]
       end
+      data
+    end
 
-      data.merge({
+    private_class_method :prepare_hash_from_existing_metadata_attrs
+
+    # prepare metadata for database storage
+    def self.prepare_metadata url, meta
+      prepare_hash_from_existing_metadata_attrs(meta).merge({
         eid:            meta["id"],
         url:            url,
         extractor:      meta["extractor"].downcase,

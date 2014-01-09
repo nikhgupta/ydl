@@ -60,21 +60,21 @@ module Ydl
     data.reject{|url, meta| meta.nil?}.keys
   end
 
-  def self.download_and_display_progress_for(urls = [], verbose)
-    Ydl::Videos.pending.where(url: urls).map do |video|
+  def self.download_and_display_progress_for(urls = [], verbose = false)
+    Ydl::Videos.pending.where(url: urls).all.select do |video|
       Ydl.delegator.output = verbose
       Ydl.debug "Downloading video: #{video.nice_title}\nThis may take a while.."
       response = video.download
 
       case
-      when response[:file] then Ydl.debug "Downloaded to: #{video.file_path}"
-      when verbose && response[:error] then Ydl.warn ":\n"+ response[:output]
+      when response[:file]  then Ydl.debug "Downloaded to: #{video.file_path}"
+      when verbose          then puts response[:output]
       when response[:error] then Ydl.warn response[:error]
       else Ydl.debug ":\n" + response[:output]
       end
 
-      video if response
-    end.compact
+      video.completed
+    end
   end
 
   def self.display_search_results matched = []

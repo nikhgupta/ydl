@@ -110,7 +110,7 @@ module Ydl
     method_option :piped, type: :boolean, default: false,
       desc: "display progress for all videos separately to enable piping support"
     def feed *paths
-      urls, added = [], 0
+      urls, added = [], []
 
       # populate the list of urls from files and urls supplied to the command.
       paths.each do |path|
@@ -122,25 +122,22 @@ module Ydl
       end
 
       # only download metadata for videos not already in database
-      total    = urls.count
-      urls     = Ydl::Videos.filter_out_existing_videos(urls)
-      existing = total - urls.count
-
-      Ydl.debug "Adding #{total} video(s) in the database."
-      Ydl.debug "Found #{existing} existing video(s) in the database." if existing > 0
+      Ydl.debug "Adding #{urls.count} video(s) in the database."
+      existing = Ydl::Videos.where_url_in(urls)
+      Ydl.debug "Found #{existing.count} existing video(s) in the database." if existing.any?
 
       progress = ProgressBar.create({
-        total: total, starting_at: existing,
+        total: urls.count, starting_at: existing.count,
         title: "Completed", format: "%a | %b>>%i | %c/%C %t"
       }) unless options[:piped] || options[:verbose]
 
       # insert or update video(s) in the database, and
       # display the progress.
-      Ydl::Videos.iterate_on_metadata_for(urls, options[:verbose]) do |url, meta|
+      Ydl::Videos.iterate_on_metadata_for(urls - existing, options[:verbose]) do |url, meta|
         if meta
+          added.push url
           Ydl::Videos::Data.upsert meta
           Ydl.debug "Found metadata for: #{url}" unless progress
-          added += 1
         else
           Ydl.warn "Could not found metadata for: #{url}" unless progress
         end
@@ -148,12 +145,16 @@ module Ydl
       end
 
       # display the statistics
-      Ydl.debug "Added #{added} video(s)."
-      Ydl.debug "Discarded #{urls.count - added} video(s)." unless urls.count == added
+      discarded = urls.count - added.count
+      Ydl.debug "Added #{added.count} video(s)."
+      Ydl.debug "Discarded #{discarded} video(s)." if discarded > 0
 
       # re-generate our fuzzy match database.
       Ydl.debug "Generating fuzzy match database.."
       Ydl::FuzzBall.prepare
+
+      # return the urls which were added to the database
+      added | existing.map{ |video| video.url }
     end
 
     desc 'search [KEYWORDS]', "search and display videos with the given keywords"
@@ -188,43 +189,42 @@ module Ydl
     def download *paths
 
       # first, add the videos to the database
-      invoke :feed, paths
+      # TODO: use url list from the result of this command, instead.
+      urls = invoke :feed, paths
+      downloaded = []
 
-      urls, downloaded = [], 0
-
-      # populate the list of urls from files and urls supplied to the command.
-      paths.each do |path|
-        if File.readable?(path)
-          urls |= (File.readlines(path).map(&:strip) rescue [])
-        else # elsif path.url?
-          urls.push path
-        end
+      if urls.count > 0
+        existing = Ydl::Videos::Data.completed.where url: urls
+        Ydl.debug "Downloading #{urls.count} video(s)."
+        Ydl.debug "Found #{existing.count} existing video(s)." if existing.any?
+      else
+        Ydl.debug "Nothing to download :("
+        return
       end
 
-      # only download metadata for videos not already in database
-      total    = urls.count
-      urls     = Ydl::Videos.filter_out_existing_videos(urls, completed: 1)
-      existing = total - urls.count
-
-      Ydl.debug "Downloading #{total} video(s)."
-      Ydl.debug "Found #{existing} existing video(s)." if existing > 0
-
-      # Download the videos so found
-      Ydl::Videos::Data.where(url: urls).each do |video|
+      # Download the pending videos
+      Ydl::Videos::Data.pending.where(url: urls).each do |video|
         Ydl.delegator.output = options[:verbose]
         Ydl.debug "Downloading video: #{video.nice_title}"
         Ydl.debug "This may take a while.."
         response = video.download
-        if response.has_key? :file
+
+        if response[:file]
           Ydl.debug "Downloaded to: #{video.file_path}"
-          downloaded += 1
-        elsif !options[:verbose] && response[:error]
-          Ydl.warn "\n"+response[:output]
+          downloaded.push video.url
+        end
+
+        if options[:verbose] && response[:error]
+          Ydl.warn ":\n"+ response[:output]
+        elsif options[:verbose]
+          Ydl.debug ":\n" + response[:output]
+        elsif response[:error]
+          Ydl.warn response[:error]
         end
       end
 
-      Ydl.debug "Downloaded #{downloaded} video(s)."
-
+      Ydl.debug "Downloaded #{downloaded.count} video(s)."
+      Ydl.debug "Discarded #{urls.count - downloaded.count} video(s)."
     end
 
 

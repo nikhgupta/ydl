@@ -51,12 +51,6 @@ module Ydl
         self.update options
       end
 
-      def display_title(length = 50)
-        title  = self.nice_title
-        vidlen = title.length
-        vidlen > length ? title[0,length] + ".." : title + " " * (length + 2 - vidlen)
-      end
-
       # Download the current video
       # TODO: Probably: http://bit.ly/1lQpQyF to capture the download progress??
       #
@@ -69,11 +63,15 @@ module Ydl
         Ydl.delegator.capture = true
         data = { output: Ydl.delegator.run }
 
-        filepath = data[:output].match(/^\[.*?\]\s*Destination:\s*(.*?)$/)[1] rescue nil
-        self.mark_as_downloaded file_path: filepath if filepath
+        data[:error] = data[:output].match(/^ERROR:\s*(.*?)$/)[1] rescue nil
 
-        data[:error] = true if !filepath && data[:output].include?("ERROR:")
-        filepath ? {file: filepath} : data
+        unless data[:error]
+          filepath = data[:output].match(/^\[.*?\]\s*Destination:\s*(.*?)$/)[1] rescue nil
+          self.mark_as_downloaded file_path: filepath if filepath
+          data[:file] = filepath if filepath
+        end
+
+        data
       end
 
       # TODO: test this method!
@@ -157,8 +155,9 @@ module Ydl
       return [ found, matches ]
     end
 
-    def self.filter_out_existing_videos(urls = [], conditions = {})
-      urls -= Data.where(conditions).select(:url).all.map(&:url)
+    def self.where_url_in(urls = [], conditions = {})
+      conditions.merge!(url: urls) if urls.any?
+      Data.where(conditions).all
     end
 
     # Extract metadata information for video(s) with given URLs,

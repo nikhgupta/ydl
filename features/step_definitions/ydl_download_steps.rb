@@ -4,7 +4,7 @@ end
 
 When(/^I download (?:|a |the )videos? (?:|named|with url) "(.*?)"$/) do |list|
   @urls = list.split(";").map{|name| test_helper_get_video_url name}
-  step "I run `ydl download '#{@urls.join("' '")}'`"
+  step "I run `ydl download '#{@urls.join("' '")}' #{@extra_options}`"
   step "database is reloaded"
 end
 

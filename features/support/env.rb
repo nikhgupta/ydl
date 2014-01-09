@@ -24,8 +24,8 @@ end
 
 # allow upto 10 seconds for slow requests
 Before('@downloads') do
-  @aruba_timeout_seconds = 20
-  @aruba_io_wait_seconds = 20
+  @aruba_timeout_seconds = 60
+  @aruba_io_wait_seconds = 60
 end
 
 

@@ -7,7 +7,7 @@ module Ydl
         when "aur ho"    then "http://www.youtube.com/watch?v=_vcb29-geqQ"
         when "hawa hawa" then "http://www.youtube.com/watch?v=xQryki2ZhYA"
         when "tum ho"    then "http://www.youtube.com/watch?v=2iUZRSeqzz8"
-        when "smallest"  then "http://www.youtube.com/watch?v=OQlnsg1jw_o"
+        when "timer"     then "http://www.youtube.com/watch?v=7xbU0MDQdLM"
         else name
         end
       end

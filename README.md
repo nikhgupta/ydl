@@ -47,11 +47,14 @@ machine.
 
 1. Move `Ydl.delegator.metadata_file_for` method to `Ydl`
 2. Learn how to install youtube-dl on travis and enable travis-ci support.
-3. Use a central location to store the video metadata for all users, anonymously?
-   - *BENEFIT*    : That will greatly decrease the time it takes to add videos in db.
-   - *CAUTION*    : Will create a huge amount of database, in my opinion.
-   - *NOTE*       : Fall back to local extraction of json data when service does not work.
-   - *PERFORMANCE*: The service would cache json for future processing.
+3. Upload small test videos and use them in the tests.
+4. Hash of videos should be done on the url itself (think about generic videos).
+5. Display video's download progress when downloading.
+6. Use a central location to store the video metadata for all users, anonymously?
+   - *Benefit*    : That will greatly decrease the time it takes to add videos in db.
+   - *Caution*    : Will create a huge amount of database, in my opinion.
+   - *Note*       : Fall back to local extraction of json data when service does not work.
+   - *Performance*: The service would cache json for future processing.
 
 ## Contributing
 

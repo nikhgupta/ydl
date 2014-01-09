@@ -64,9 +64,6 @@ module Ydl
       output = `#{self.path} #{command}`.strip
       puts output.gsub(/^/, "          -- ") if @output
 
-      # puts command
-      # puts output
-
       self.reset_for_next_command
       output
     end

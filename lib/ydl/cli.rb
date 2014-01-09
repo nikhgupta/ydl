@@ -119,7 +119,7 @@ module Ydl
 
       # insert or update video(s) in the database, and
       # display the progress.
-      data = Ydl::Videos.feed_on(urls - existing, options[:verbose]) do |url, meta|
+      data = Ydl::Videos.feed_on_multiple(urls - existing, options[:verbose]) do |url, meta|
         if meta
           Ydl.debug "Found metadata for: #{url}" unless progress
         else

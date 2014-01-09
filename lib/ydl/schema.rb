@@ -9,7 +9,7 @@ unless Ydl::DATABASE.table_exists? :videos
     column :short_title,    :string
     column :full_title,     :string
     column :nice_title,     :string
-    column :file_path,      :string
+    column :file_path,      :string, default: nil
     column :extension,      :string
     column :description,    :string
     column :thumbnail,      :string
@@ -27,7 +27,7 @@ unless Ydl::DATABASE.table_exists? :videos
     column :active,         :boolean, default: true
     column :raw_data,       :string,  null: false
     column :uploaded_on,    :date
-    column :downloaded_at,  :datetime
+    column :downloaded_at,  :datetime, default: nil
     column :updated_at,     :datetime
   end
 end

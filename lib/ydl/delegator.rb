@@ -29,7 +29,7 @@ module Ydl
     # Reset args, options and switches for the next command.
     #
     def reset_for_next_command
-      self.args, self.switches, self.options = [], [], {}
+      # self.args, self.switches, self.options = [], [], {}
       self.output, self.capture = false, false
     end
     alias :reset :reset_for_next_command
@@ -40,26 +40,28 @@ module Ydl
     # To add options,  pass a  hash.
     # To add args,     pass strings. :)
     #
-    def << values
-      case values.class.to_s
-      when 'Array' then @switches |= values.map(&:to_sym)
-      when 'Hash'  then @options.merge!(values)
-      else @args |= [ values.to_s ]
-      end
-      self
-    end
+    # def << values
+    #   case values.class.to_s
+    #   when 'Array' then @switches |= values.map(&:to_sym)
+    #   when 'Hash'  then @options.merge!(values)
+    #   else @args |= [ values.to_s ]
+    #   end
+    #   self
+    # end
 
     # Run a command using youtube-dl.
     #
-    def run
-      command  = self.path
-      command += " \"#{@args.join("\" \"")}\"" if args.any?
-      @switches.each{ |opt| command += " --#{opt.to_s}" }
-      @options.each { |opt, val| command += " --#{opt.to_s} \"#{val}\"" }
+    def run command
+      # unless command
+      #   command = " \"#{@args.join("\" \"")}\"" if args.any?
+      #   @switches.each{ |opt| command += " --#{opt.to_s}" }
+      #   @options.each { |opt, val| command += " --#{opt.to_s} \"#{val}\"" }
+      # end
+      return if command.nil? || command.strip.empty?
       command += " 2>&1"
       command += " >/dev/null" unless @capture || @output
 
-      output = `#{command}`.strip
+      output = `#{self.path} #{command}`.strip
       puts output.gsub(/^/, "          -- ") if @output
 
       # puts command
@@ -82,10 +84,16 @@ module Ydl
     def extract_metadata_for_video url
       mfile = self.metadata_file_for(url)
       unless File.file? mfile
-        self << url
-        self << %w[ skip-download write-info-json ignore-errors ]
-        self << { output: mfile.gsub(/\.info\.json$/, '') }
-        self.run
+
+        # self << url
+        # self << %w[ skip-download write-info-json ignore-errors ]
+        # self << { output: mfile.gsub(/\.info\.json$/, '') }
+        # self.run
+
+        # Run directly:
+        command  = "#{url} --skip-download --write-info-json --ignore-errors"
+        command += " -o '#{mfile.gsub(/\.info\.json$/, '')}'"
+        Ydl.delegator.run command
       end
       JSON.parse File.read(mfile) rescue nil
     end

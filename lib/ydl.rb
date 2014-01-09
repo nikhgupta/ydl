@@ -1,4 +1,4 @@
-require 'pry'
+# require 'pry'
 require 'json'
 require 'sequel'
 require 'sqlite3'

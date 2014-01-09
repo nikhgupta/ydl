@@ -3,7 +3,7 @@ Feature: Downloading videos
 	Background:
 		Given I have initialized Ydl on this system
 
-	@downloads @announce
+	@downloads
 	Scenario: Download a video
 		When  I download video named "timer"
 		Then  the output should contain "Adding 1 video"
@@ -20,7 +20,7 @@ Feature: Downloading videos
 	Scenario: Download multiple videos
 		When  I download videos named "timer; timer"
 		Then  the output should contain "Adding 2 video"
-		And   the output should contain "Downloading 2 video"
+		And   the output should contain "Downloading 1 video"
 		And   the output should contain "Downloaded 1 video"
 
 	Scenario: Download a video with invalid data

@@ -29,6 +29,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'conjuror'
   spec.add_dependency 'ruby-progressbar'
 
-  spec.add_development_dependency "pry"
+  # spec.add_development_dependency "pry"
   spec.add_development_dependency "aruba"
 end

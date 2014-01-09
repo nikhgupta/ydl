@@ -1,5 +1,10 @@
-Given(/^I have downloaded video named "(.*?)"$/) do |list|
+Given(/^I have downloaded videos? named "(.*?)"$/) do |list|
   step "I download videos named \"#{list}\""
+  step "the output should contain \"Adding #{@urls.count} video\""
+  step "the output should contain \"Downloaded\""
+  step "records for the videos should exist in the database"
+  step "the downloaded video files should exist"
+  step "the videos should be marked as downloaded in the database"
 end
 
 When(/^I download (?:|a |the )videos? (?:|named|with url) "(.*?)"$/) do |list|

@@ -19,7 +19,7 @@ module Ydl
       # FIXME: use dynamic methods, instead!
       subcommand    = args[2][:current_command].name.downcase.to_sym
       safe_commands = [:init, :help]
-      available     = [:update, :feed, :search, :download]
+      available     = [:update, :add, :search, :download]
       return if safe_commands.include? subcommand
 
       # err out with usage if Ydl has not been initialized
@@ -106,10 +106,10 @@ module Ydl
       house_keeper.upgrade!
     end
 
-    desc 'feed [PATH1] [PATH2] [URL]..', "add videos from the given files and supplied urls"
+    desc 'add [PATH1] [PATH2] [URL]..', "add videos from the given files and supplied urls"
     method_option :piped, type: :boolean, default: false,
       desc: "display progress for all videos separately to enable piping support"
-    def feed *paths
+    def add *paths
       urls, added = [], []
 
       # populate the list of urls from files and urls supplied to the command.
@@ -123,7 +123,7 @@ module Ydl
 
       # only download metadata for videos not already in database
       Ydl.debug "Adding #{urls.count} video(s) in the database."
-      existing = Ydl::Videos.where_url_in(urls)
+      existing = Ydl::Videos.where_url_in(urls).map(&:url)
       Ydl.debug "Found #{existing.count} existing video(s) in the database." if existing.any?
 
       progress = ProgressBar.create({
@@ -154,7 +154,7 @@ module Ydl
       Ydl::FuzzBall.prepare
 
       # return the urls which were added to the database
-      added | existing.map{ |video| video.url }
+      added | existing
     end
 
     desc 'search [KEYWORDS]', "search and display videos with the given keywords"
@@ -190,7 +190,7 @@ module Ydl
 
       # first, add the videos to the database
       # TODO: use url list from the result of this command, instead.
-      urls = invoke :feed, paths
+      urls = invoke :add, paths
       downloaded = []
 
       if urls.count > 0
@@ -223,8 +223,9 @@ module Ydl
         end
       end
 
+      discarded = urls.count - downloaded.count
       Ydl.debug "Downloaded #{downloaded.count} video(s)."
-      Ydl.debug "Discarded #{urls.count - downloaded.count} video(s)."
+      Ydl.debug "Discarded #{discarded} video(s)." if discarded > 0
     end
 
 

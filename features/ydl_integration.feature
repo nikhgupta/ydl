@@ -1,4 +1,4 @@
-@slow_process
+@downloads
 Feature: Integration Test ;)
 
 	Background:

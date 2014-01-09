@@ -20,7 +20,7 @@ end
 
 When(/^I add (?:|a )videos? (?:named|with url) "(.*?)"$/) do |list|
   @urls = list.split(";").map{ |name| test_helper_get_video_url(name) }
-  command = "feed #{@urls.join(" ")} #{@extra_options}"
+  command = "add #{@urls.join(" ")} #{@extra_options}"
   step "I run `ydl #{command}`"
   step 'database is reloaded'
 end

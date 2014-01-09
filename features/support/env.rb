@@ -28,12 +28,11 @@ Before('@downloads') do
   @aruba_io_wait_seconds = 60
 end
 
-
 # allow upto an hour for pry sessions
-Before('@pry') do
-  @aruba_timeout_seconds = 3600
-  @aruba_io_wait_seconds = 3600
-end
+# Before('@pry') do
+#   @aruba_timeout_seconds = 3600
+#   @aruba_io_wait_seconds = 3600
+# end
 
 After do |scenario|
   # Tell Cucumber to quit after this scenario is done - if it failed.

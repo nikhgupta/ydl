@@ -27,7 +27,7 @@ end
 
 Then(/cache files? with metadata for the videos? should( not)? exist$/) do |negate|
   @urls.each do |url|
-    result = File.file? Ydl.delegator.metadata_file_for(url)
+    result = File.file? delegator.metadata_file_for(url)
     expected = !negate
     expect(result).to eq(expected)
   end
@@ -41,7 +41,7 @@ end
 
 Then(/records? for the videos? should( not)? exist in the database$/) do |negate|
   @urls.each do |url|
-    json_file  = Ydl.delegator.metadata_file_for(url)
+    json_file  = delegator.metadata_file_for(url)
     record     = Ydl::Videos.first url: url
     if negate
       expect(record).to be_nil

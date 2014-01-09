@@ -15,4 +15,5 @@ module Ydl
   end
 end
 
+World(Ydl::Helpers)
 World(Ydl::TestHelpers)

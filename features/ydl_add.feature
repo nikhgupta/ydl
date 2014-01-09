@@ -36,7 +36,7 @@ Feature: Add videos to the database
 		When  I add a video named "phir se"
 		Then  the output should contain the url for the above video
 		When  I add a video with url "http://?"
-		Then  the output should contain "[WARNING]"
+		Then  the output should contain "WARNING"
 
 	# NOTE: implies --piped
 	Scenario: Without suppressing output from youtube-dl

@@ -6,10 +6,6 @@ module Ydl
       File.exists?(Ydl::CONFIG.path) && !Ydl::CONFIG[:download_path].empty?
     end
 
-    # TODO: method stub.
-    #
-    def compatible?; true; end
-
     # Do the initial house-keeping work.
     #
     def run_setup options = {}

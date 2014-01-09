@@ -50,53 +50,39 @@ module Ydl
       desc: "Whether to update 'youtube-dl' program?"
     def init
       # hire a new housekeeper
-      house_keeper = Ydl::HouseKeeper.new
-      settings     = {}
+      house_keeper, settings = Ydl::HouseKeeper.new, {}
 
       # greet the owner.
-      puts "Welcome to YDL. The Youtube-DL companion!"
-      puts "I would love to assist you in your quest, but first, let me ask you:"
-      puts
+      question = <<-CONTENT.gsub(/^\s{8}/, '')
+        Welcome to YDL. The Youtube-DL companion!
+        I would love to assist you in your quest, but first, let me ask you:
 
-      # which room should I use?
-      question  = "Where should I download the videos? (Give me a folder!)\n"
-      question += "Note that, this directory will be created, if it does not exist!\n"
-      question += "[default: <current-directory>] "
-      settings[:download_path]   = File.expand_path ask(question).strip
+        Where should I download the videos? (Give me a folder!)
+        Note that, this directory will be created, if it does not exist!
+        [default: <current-directory>]
+      CONTENT
 
-      # should I bring the party home?
-      question  = "Should I, also, download the playlist associated with a video? [no]"
-      settings[:allow_playlists] = yes? question
+      download_dir = File.expand_path ask(question).strip
+      classifier   = "%(extractor)s/%(title)s-%(id)s-%(age_limit)s.%(ext)s"
 
-      # oh, yes! I am organized.
-      # FIXME: really needed?
-      settings[:classifier]      = "%(extractor)s/%(title)s-%(id)s-%(age_limit)s.%(ext)s"
+      # let the owner know, what mischief we are upto :)
+      puts "\nAlright! That's it :)\nI will do the initial house-keeping for you."
 
-      puts
-      if house_keeper.compatible?
-        # let the owner know, what mischief we are upto :)
-        puts "Alright! That's it :)"
-        puts "I will, now, do the initial house-keeping for you."
-
-        # find the path to the youtube-dl program
-        begin
-          Ydl.delegator.path
-        rescue RuntimeError
-          puts "Seems like this is not my brightest day.. :("
-          puts "I was unable to find a valid path to the youtube-dl program on your machine."
-          question = "Can you tell me where it is located?"
-          options[:youtube_dl_path] = File.expand_path(ask question).strip
-        end
-
-        # enough talk! get to work.
-        house_keeper.run_setup settings
-        house_keeper.upgrade! if options[:update]
-      else
-        # saying goodbyes. :(
-        puts "Unfortunately, I am incompatible with your system."
-        puts "I am not sure how that happened."
-        puts "All I know is that I need to throw myself out."
+      # find the path to the youtube-dl program
+      begin
+        Ydl.delegator.path
+      rescue RuntimeError
+        question = <<-CONTENT.gsub(/^\s{10}/, '')
+          Seems like this is not my brightest day.. :(
+          I was unable to find a valid path to the youtube-dl program on your machine.
+          Can you tell me where it is located?
+        CONTENT
+        bin_path = File.expand_path ask(question).strip
       end
+
+      # enough talk! get to work.
+      house_keeper.run_setup download_path: download_dir, classifier: classifier, bin_path: bin_path
+      house_keeper.upgrade! if options[:update]
     end
 
     # TODO: and, maybe the companion, itself?

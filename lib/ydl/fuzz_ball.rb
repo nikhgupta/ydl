@@ -16,7 +16,7 @@ module Ydl
     #
     def self.prepare
       fuzzy = Blurrily::Map.new
-      Ydl::Videos::Data.each do |video|
+      Ydl::Videos.each do |video|
         # Only title and file's name is searched for fuzzy matches.
         # Video's id is, now, not searched fuzzily, which makes sense, as the id
         # need not match partially. Therefore, it is now matched via string

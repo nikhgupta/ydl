@@ -21,7 +21,7 @@ end
 # FIXME: video files were downloaded in test run of feed!
 # FIXME: sequel reload is required by tests to pick up changes!
 When(/^(?:|the )database is reloaded$/) do
-  Ydl::Videos::Data.reload!
+  Ydl::Videos.reload!
 end
 
 Then /^the configuration file should( not)? exist$/ do |negate|

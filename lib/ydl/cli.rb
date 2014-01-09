@@ -13,7 +13,7 @@ module Ydl
 
       # ensure that the delegator is ready for a new command
       Ydl.delegator.reset_for_next_command
-      # Ydl::Videos::Data.reload!
+      # Ydl::Videos.reload!
 
       # Raise an error unless Ydl has been initialized or the task was not found.
       # FIXME: use dynamic methods, instead!
@@ -70,7 +70,7 @@ module Ydl
 
       # oh, yes! I am organized.
       # FIXME: really needed?
-      settings[:classifier]      = "%(extractor)s/%(title)s-%(id)s-%(hash)s.%(ext)s"
+      settings[:classifier]      = "%(extractor)s/%(title)s-%(id)s-%(age_limit)s.%(ext)s"
 
       puts
       if house_keeper.compatible?
@@ -110,7 +110,7 @@ module Ydl
     method_option :piped, type: :boolean, default: false,
       desc: "display progress for all videos separately to enable piping support"
     def add *paths
-      urls, added = [], []
+      urls = []
 
       # populate the list of urls from files and urls supplied to the command.
       paths.each do |path|
@@ -133,10 +133,8 @@ module Ydl
 
       # insert or update video(s) in the database, and
       # display the progress.
-      Ydl::Videos.iterate_on_metadata_for(urls - existing, options[:verbose]) do |url, meta|
+      data = Ydl::Videos.feed_on(urls - existing, options[:verbose]) do |url, meta|
         if meta
-          added.push url
-          Ydl::Videos::Data.upsert meta
           Ydl.debug "Found metadata for: #{url}" unless progress
         else
           Ydl.warn "Could not found metadata for: #{url}" unless progress
@@ -145,13 +143,11 @@ module Ydl
       end
 
       # display the statistics
+      added     = data.reject{ |url, meta| meta.nil? }.keys
       discarded = urls.count - added.count
       Ydl.debug "Added #{added.count} video(s)."
       Ydl.debug "Discarded #{discarded} video(s)." if discarded > 0
-
-      # re-generate our fuzzy match database.
-      Ydl.debug "Generating fuzzy match database.."
-      Ydl::FuzzBall.prepare
+      Ydl.debug "Generated fuzzy-match database.."
 
       # return the urls which were added to the database
       added | existing
@@ -166,7 +162,7 @@ module Ydl
     def search *keywords
       # 1st element: list of songs matching the request
       # 2nd element: fuzzy matching statistics
-      matched, stats = Ydl::Videos.search keywords, options
+      matched, stats = Ydl::Videos.fuzzy_search keywords, options
 
       matched.each do |vid|
         # TODO: convert the following to methods
@@ -194,7 +190,7 @@ module Ydl
       downloaded = []
 
       if urls.count > 0
-        existing = Ydl::Videos::Data.completed.where url: urls
+        existing = Ydl::Videos.completed.where url: urls
         Ydl.debug "Downloading #{urls.count} video(s)."
         Ydl.debug "Found #{existing.count} existing video(s)." if existing.any?
       else
@@ -203,7 +199,7 @@ module Ydl
       end
 
       # Download the pending videos
-      Ydl::Videos::Data.pending.where(url: urls).each do |video|
+      Ydl::Videos.pending.where(url: urls).each do |video|
         Ydl.delegator.output = options[:verbose]
         Ydl.debug "Downloading video: #{video.nice_title}"
         Ydl.debug "This may take a while.."

@@ -42,7 +42,7 @@ end
 Then(/records? for the videos? should( not)? exist in the database$/) do |negate|
   @urls.each do |url|
     json_file  = Ydl.delegator.metadata_file_for(url)
-    record     = Ydl::Videos::Data.first url: url
+    record     = Ydl::Videos.first url: url
     if negate
       expect(record).to be_nil
       expect(File).not_to exist(json_file)

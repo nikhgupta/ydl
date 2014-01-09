@@ -75,6 +75,10 @@ module Ydl
       self.where(conditions).all
     end
 
+    def self.already_added_urls_in(urls = [], conditions = {})
+      self.where_url_in(urls, conditions).map(&:url)
+    end
+
     # Extract metadata information for video(s) with given URLs,
     # add them to database, and iterate over them inside a block.
     #

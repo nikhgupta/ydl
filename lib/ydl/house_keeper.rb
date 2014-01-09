@@ -38,14 +38,4 @@ module Ydl
 
   end
 
-  def self.debug message
-    message = "[ DEBUG ] -- #{message}"
-    puts message
-  end
-
-  def self.warn message
-    message = "[WARNING] -- #{message}"
-    puts message
-  end
-
 end

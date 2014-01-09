@@ -9,7 +9,7 @@ Feature: Add videos to the database
 
 	Scenario: Single video by URL without piping support
 		When  I add a video named "phir se"
-		Then  the output should match /Adding.*Completed.*Added.*fuzzy/
+		Then  the output should match /Adding.*Completed.*Added/
 		And   the output should contain "Adding 1 video"
 		And   the output should contain "Completed: |="
 		And   the output should contain "Added 1 video"

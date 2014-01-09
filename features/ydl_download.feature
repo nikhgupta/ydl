@@ -19,7 +19,7 @@ Feature: Downloading videos
 	@downloads
 	Scenario: Download multiple videos
 		When  I download videos named "timer; timer"
-		Then  the output should contain "Adding 2 video"
+		Then  the output should contain "Adding 1 video"
 		And   the output should contain "Downloading 1 video"
 		And   the output should contain "Downloaded 1 video"
 

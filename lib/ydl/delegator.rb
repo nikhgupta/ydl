@@ -24,6 +24,12 @@ module Ydl
 
       mess = 'youtube-dl was not found in your PATH or the specified location.'
       raise RuntimeError, mess if !@path || @path.empty?
+
+      @path
+    end
+
+    def unknown?
+      false if self.detect_program_path rescue true
     end
 
     # Reset args, options and switches for the next command.

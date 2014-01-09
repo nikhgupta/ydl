@@ -15,22 +15,15 @@ module Ydl
       Ydl.delegator.reset_for_next_command
       # Ydl::Videos.reload!
 
-      # Raise an error unless Ydl has been initialized or the task was not found.
-      # FIXME: use dynamic methods, instead!
-      subcommand    = args[2][:current_command].name.downcase.to_sym
-      safe_commands = [:init, :help]
-      available     = [:update, :add, :search, :download]
-      return if safe_commands.include? subcommand
+      # check if the current command is safe and valid?
+      safe, valid = safe_and_valid?
+      return if safe
 
       # err out with usage if Ydl has not been initialized
-      unless Ydl::HouseKeeper.initialized?
-        error! "You must run 'ydl init' first!", true
-      end
+      error! "You must run 'ydl init' first!", true unless Ydl::HouseKeeper.initialized?
 
       # err out with usage if an unknown command was requested
-      unless available.include?(subcommand)
-        error! "Command with name '#{subcommand}' not found!", true
-      end
+      error! "Command not found!", true unless valid
     end
 
     desc 'help', "display the help message for Ydl"
@@ -50,7 +43,7 @@ module Ydl
       desc: "Whether to update 'youtube-dl' program?"
     def init
       # hire a new housekeeper
-      house_keeper, settings = Ydl::HouseKeeper.new, {}
+      house_keeper = Ydl::HouseKeeper.new
 
       # greet the owner.
       question = <<-CONTENT.gsub(/^\s{8}/, '')
@@ -69,16 +62,12 @@ module Ydl
       puts "\nAlright! That's it :)\nI will do the initial house-keeping for you."
 
       # find the path to the youtube-dl program
-      begin
-        Ydl.delegator.path
-      rescue RuntimeError
-        question = <<-CONTENT.gsub(/^\s{10}/, '')
-          Seems like this is not my brightest day.. :(
-          I was unable to find a valid path to the youtube-dl program on your machine.
-          Can you tell me where it is located?
-        CONTENT
-        bin_path = File.expand_path ask(question).strip
-      end
+      question = <<-CONTENT.gsub(/^\s{10}/, '')
+        Seems like this is not my brightest day.. :(
+        I was unable to find a valid path to the youtube-dl program on your machine.
+        Can you tell me where it is located?
+      CONTENT
+      bin_path = File.expand_path ask(question).strip if Ydl.delegator.unknown?
 
       # enough talk! get to work.
       house_keeper.run_setup download_path: download_dir, classifier: classifier, bin_path: bin_path
@@ -96,44 +85,21 @@ module Ydl
     method_option :piped, type: :boolean, default: false,
       desc: "display progress for all videos separately to enable piping support"
     def add *paths
-      urls = []
-
-      # populate the list of urls from files and urls supplied to the command.
-      paths.each do |path|
-        if File.readable?(path)
-          urls |= (File.readlines(path).map(&:strip) rescue [])
-        else # elsif path.url?
-          urls.push path
-        end
-      end
-
-      # only download metadata for videos not already in database
+      # urls that were fed to us
+      urls = Ydl.prepare_url_list_from(paths)
       Ydl.debug "Adding #{urls.count} video(s) in the database."
-      existing = Ydl::Videos.where_url_in(urls).map(&:url)
-      Ydl.debug "Found #{existing.count} existing video(s) in the database." if existing.any?
 
-      progress = ProgressBar.create({
-        total: urls.count, starting_at: existing.count,
-        title: "Completed", format: "%a | %b>>%i | %c/%C %t"
-      }) unless options[:piped] || options[:verbose]
+      # urls that have already been added
+      existing = Ydl::Videos.already_added_urls_in(urls)
+      Ydl.debug "Found #{existing.count} existing video(s) in the database from this list."
 
-      # insert or update video(s) in the database, and
-      # display the progress.
-      data = Ydl::Videos.feed_on_multiple(urls - existing, options[:verbose]) do |url, meta|
-        if meta
-          Ydl.debug "Found metadata for: #{url}" unless progress
-        else
-          Ydl.warn "Could not found metadata for: #{url}" unless progress
-        end
-        progress.increment if progress
-      end
-
-      # display the statistics
-      added     = data.reject{ |url, meta| meta.nil? }.keys
-      discarded = urls.count - added.count
+      # new urls that were added in this iteration
+      added = Ydl.feed_and_display_progress_for(urls, existing, options)
       Ydl.debug "Added #{added.count} video(s)."
+
+      # discarded or errored urls
+      discarded = urls.count - added.count
       Ydl.debug "Discarded #{discarded} video(s)." if discarded > 0
-      Ydl.debug "Generated fuzzy-match database.."
 
       # return the urls which were added to the database
       added | existing
@@ -146,19 +112,13 @@ module Ydl
     method_option :limit, type: :numeric, default: 10,
       desc: "limit the number of matching results returned by this command (default: 10)"
     def search *keywords
-      # 1st element: list of songs matching the request
+      # 1st element: list of videos matching the request
       # 2nd element: fuzzy matching statistics
+      # 3rd element: Sequel's Query selector
       matched, stats, query = Ydl::Searcher.new(keywords, options).run
+      ( Ydl.debug "No videos found :("; return ) if matched.empty?
 
-      matched.each do |vid|
-        # TODO: convert the following to methods
-        status = (vid.completed ? "C" : "P")
-        file_path = vid.file_path.gsub(Dir.pwd, "./")
-                       .gsub(ENV['HOME'], '~') if vid.completed
-
-        puts "#{"%3d" % vid[:score]} pts : [#{status}] : #{vid.nice_title}"
-        puts "        : #{file_path}" if file_path
-      end
+      Ydl.display_search_results matched
 
       message = "Displaying a total of #{matched.count} videos."
       puts "-" * message.length
@@ -169,44 +129,20 @@ module Ydl
     method_option :piped, type: :boolean, default: false,
       desc: "display progress for all videos separately to enable piping support"
     def download *paths
-
       # first, add the videos to the database
-      # TODO: use url list from the result of this command, instead.
       urls = invoke :add, paths
-      downloaded = []
 
-      if urls.count > 0
-        existing = Ydl::Videos.completed.where url: urls
-        Ydl.debug "Downloading #{urls.count} video(s)."
-        Ydl.debug "Found #{existing.count} existing video(s)." if existing.any?
-      else
-        Ydl.debug "Nothing to download :("
-        return
-      end
+      ( Ydl.debug "Nothing to download :("; return ) if urls.empty?
+      Ydl.debug "Downloading #{urls.count} video(s)."
+
+      existing = Ydl::Videos.completed.where url: urls
+      Ydl.debug "Found #{existing.count} existing video(s) from this list."
 
       # Download the pending videos
-      Ydl::Videos.pending.where(url: urls).each do |video|
-        Ydl.delegator.output = options[:verbose]
-        Ydl.debug "Downloading video: #{video.nice_title}"
-        Ydl.debug "This may take a while.."
-        response = video.download
-
-        if response[:file]
-          Ydl.debug "Downloaded to: #{video.file_path}"
-          downloaded.push video.url
-        end
-
-        if options[:verbose] && response[:error]
-          Ydl.warn ":\n"+ response[:output]
-        elsif options[:verbose]
-          Ydl.debug ":\n" + response[:output]
-        elsif response[:error]
-          Ydl.warn response[:error]
-        end
-      end
+      downloaded = Ydl.download_and_display_progress_for(urls, options[:verbose])
+      Ydl.debug "Downloaded #{downloaded.count} video(s)."
 
       discarded = urls.count - downloaded.count
-      Ydl.debug "Downloaded #{downloaded.count} video(s)."
       Ydl.debug "Discarded #{discarded} video(s)." if discarded > 0
     end
 
@@ -220,6 +156,15 @@ module Ydl
         puts "Error Occurred: #{message}\n\n"
         invoke :help, [false] if show_usage
         exit(128)
+      end
+
+      def safe_and_valid?
+        sub = @_initializer[2][:current_command].name rescue nil
+        return [ false, false ] unless sub
+
+        safe  = ["init", "help"]
+        valid = self.class.tasks.keys
+        [ safe.include?(sub), valid.include?(sub) ]
       end
     }
   end

@@ -2,3 +2,11 @@ language: ruby
 rvm:
   - 2.1.0
   - 2.0.0
+  - 1.9.3
+  - ruby-head
+before_install:
+  - gem update --system 2.1.11
+  - gem --version
+  - sudo curl https://yt-dl.org/downloads/2014.01.08/youtube-dl -o /usr/local/bin/youtube-dl
+  - sudo chmod a+x /usr/local/bin/youtube-dl
+  - sudo youtube-dl -U

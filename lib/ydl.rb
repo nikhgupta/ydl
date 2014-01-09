@@ -23,9 +23,11 @@ require "ydl/version"
 require "ydl/extensions"
 require "ydl/helpers"
 require "ydl/formatter"
-require "ydl/schema"
 require "ydl/delegator"
 require "ydl/fuzz_ball"
 require "ydl/videos"
 require "ydl/searcher"
 require "ydl/cli"
+
+Sequel.extension :migration
+Sequel::Migrator.run(Ydl::DATABASE, File.join(File.dirname(__FILE__), "db"))

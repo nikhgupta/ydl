@@ -27,6 +27,7 @@ end
 
 # require internals
 require "ydl/version"
+require "ydl/schema"
 require "ydl/fuzz_ball"
 require "ydl/delegator"
 require "ydl/videos"

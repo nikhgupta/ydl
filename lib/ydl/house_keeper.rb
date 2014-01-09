@@ -19,9 +19,6 @@ module Ydl
 
       # make sure that the download directory exists
       FileUtils.mkdir_p options[:download_path]
-
-      # create the database tables as well
-      setup_database_tables
     end
 
     # Upgrade Ydl and Youtube-DL on this machine.
@@ -41,44 +38,6 @@ module Ydl
     #
     def override_configuration settings = {}
       settings.each { |key, value| Ydl::CONFIG[key] = value }
-    end
-
-    # Create database tables, if they do not exist.
-    #
-    def setup_database_tables
-      # create the database table for: videos
-      unless Ydl::DATABASE.table_exists? :videos
-        Ydl::DATABASE.create_table :videos do
-          primary_key :id
-          column :eid,            :string
-          column :extractor,      :string
-          column :hash,           :string, size: 32, index: { unique: true }
-          column :url,            :string, null: false
-          column :short_title,    :string
-          column :full_title,     :string
-          column :nice_title,     :string
-          column :file_path,      :string
-          column :extension,      :string
-          column :description,    :string
-          column :thumbnail,      :string
-          column :uploader,       :string
-          column :uploader_id,    :string
-          column :playlist,       :string
-          column :playlist_index, :integer
-          column :width,          :integer
-          column :height,         :integer
-          column :duration,       :integer
-          column :age_limit,      :integer
-          column :view_count,     :integer
-          column :format,         :integer
-          column :completed,      :boolean, default: false
-          column :active,         :boolean, default: true
-          column :raw_data,       :string,  null: false
-          column :uploaded_on,    :date
-          column :downloaded_at,  :datetime
-          column :updated_at,     :datetime
-        end
-      end
     end
 
   end

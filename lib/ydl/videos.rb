@@ -112,60 +112,6 @@ module Ydl
       meta
     end
 
-    # Search the database for videos matching the given keywords.
-    #
-    # This is done using fuzzy matching and eager loading as much as possible.
-    # If you want to grab an instance of `Sequel::SQLite::Dataset` object,
-    # add a `query: true` option to `options`.
-    #
-    def self.fuzzy_search keywords = [], options = {}
-      found, matches = nil, []
-
-      # find the possible filters that the user has passed
-      # NOTE: make sure extra filter names, like 'limit', does not coincide with
-      # column names in the table.
-      prominent_filters  = [:eid, :url]
-      narrowing_filters = options.keys & self.columns - prominent_filters
-
-      # if an exact match is intended, return the matching videos from the db
-      prominent_filters.each do |filter|
-        found = self.where(filter => options[filter])
-        break if found.any?
-      end
-
-      # if the user has supplied keywords, use the fuzz ball, and add
-      # a percentage column for the matches, at the same time
-      #
-      # get the matching video's data from the database, otherwise if no match
-      # was found, match against the whole database.
-      if keywords.any? && found.empty?
-        fuzz_ball = Ydl::FuzzBall.load
-        matches   = fuzz_ball.find keywords.join(" "), options[:limit]
-        matches.map!{ |m| m.push (m[1]/m[2].to_f * 100).to_i  } if matches.any?
-        found = matches.empty? ? self : self.with_pk_in(matches.map(&:first))
-      end
-
-      # now narrow down the matched results using supplied filters
-      narrowing_filters.each do |filter|
-        found = found.where(filter => options[filter])
-      end
-
-      # now, apply the limit for the number of returned results, and
-      # load and sort the results from database
-      found = found.limit(options[:limit]).all
-      found = found.sort_by do |video|
-        score, total = matches.detect{|data| data[0] == video.pk}[1,2] rescue [0,100]
-        density = video.nice_title.split(" ") & keywords
-        score = score + 07 * density.count
-        video[:score] = score
-        # total = 07 * keywords.count
-        # video[:score] = (score/total.to_f * 100).to_i
-      end.reverse
-
-      # now, just send the results we found with that much patience.
-      return [ found, matches ]
-    end
-
     def self.dimensions meta
       format = meta["format"].match(/\s*(\d+)\s*-\s*(\d+)x(\d+)\s*$/)
       format_id, width, height = format[1,3].map(&:to_i) rescue [0, 0, 0]

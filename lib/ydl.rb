@@ -26,13 +26,14 @@ module Ydl
 end
 
 # require internals
-require "ydl/version"
-require "ydl/schema"
-require "ydl/fuzz_ball"
-require "ydl/delegator"
-require "ydl/videos"
-require "ydl/house_keeper"
 require "ydl/cli"
+require "ydl/schema"
+require "ydl/videos"
+require "ydl/version"
+require "ydl/searcher"
+require "ydl/delegator"
+require "ydl/fuzz_ball"
+require "ydl/house_keeper"
 
 class String
   # Sanitize a given string and strip any illegal characters, and downcase it.

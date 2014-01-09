@@ -148,7 +148,7 @@ module Ydl
     def search *keywords
       # 1st element: list of songs matching the request
       # 2nd element: fuzzy matching statistics
-      matched, stats = Ydl::Videos.fuzzy_search keywords, options
+      matched, stats, query = Ydl::Searcher.new(keywords, options).run
 
       matched.each do |vid|
         # TODO: convert the following to methods

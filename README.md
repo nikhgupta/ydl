@@ -3,6 +3,9 @@
 The Unofficial [youtube-dl](youtube-dl) Companion :)  
 **In heavy development stages..**
 
+[![CodeClimate](https://codeclimate.com/github/nikhgupta/ydl.png)](https://codeclimate.com/github/nikhgupta/ydl)
+[![BuildStatus](https://travis-ci.org/nikhgupta/ydl.png?branch=develop)](https://travis-ci.org/nikhgupta/ydl)
+
 ## Features Intended:
 
 - **Utilities**:

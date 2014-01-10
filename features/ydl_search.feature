@@ -3,9 +3,11 @@ Feature: Search Videos
 	As a user
 	I would like to be able to search videos from given filters
 
+    Background:
+        Given I have initialized Ydl on this system
+
 	@slow_process
 	Scenario: Keyword Search
-		Given I have initialized Ydl on this system
 		When  I add videos named "phir se; aur ho; tum ho; hawa hawa"
 		Then  the output should contain "Added 4 video"
 		When  I run `ydl search hawa`
@@ -15,8 +17,7 @@ Feature: Search Videos
 		And   the output should not match /\[C.*\].*hawa\s*hawa/
 
 	Scenario: Keyword Search
-		Given I have initialized Ydl on this system
-		And   I have added videos named "phir se; aur ho; tum ho; hawa hawa"
+		Given I have added videos named "phir se; aur ho; tum ho; hawa hawa"
 		When  I run `ydl search hawa`
 		Then  the output should contain "hawa hawa"
 		When  I run `ydl search kawa`

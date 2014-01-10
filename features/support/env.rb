@@ -2,6 +2,10 @@
 require 'json'
 require 'digest/md5'
 
+# initialize coveralls
+require 'coveralls'
+Coveralls.wear!
+
 # setup environment variable that notifies Ydl that we are testing it ;)
 ENV['ARUBA_TEST'] = "true"
 

@@ -5,6 +5,7 @@ The Unofficial [youtube-dl](youtube-dl) Companion :)
 
 [![CodeClimate](https://codeclimate.com/github/nikhgupta/ydl.png)](https://codeclimate.com/github/nikhgupta/ydl)
 [![BuildStatus](https://travis-ci.org/nikhgupta/ydl.png?branch=develop)](https://travis-ci.org/nikhgupta/ydl)
+[![CoverageStatus](https://coveralls.io/repos/nikhgupta/ydl/badge.png)](https://coveralls.io/r/nikhgupta/ydl)
 
 ## Features Intended:
 

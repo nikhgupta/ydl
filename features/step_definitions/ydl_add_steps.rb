@@ -3,7 +3,7 @@ Given(/^I have added (?:|a )videos? named "(.*?)"$/) do |list|
   step "I add videos named \"#{list}\""
   step "the output should contain \"Adding #{count} video\""
   step "the output should contain \"Added #{count} video\""
-  step "the output should contain \"Completed: |=\""
+  step "the output should contain \"PROGRESS: |=\""
   step "cache files with metadata for the videos should exist"
   step "records for the videos should exist in the database"
 end

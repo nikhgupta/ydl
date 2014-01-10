@@ -54,13 +54,14 @@ module Ydl::Helpers
 
   # Create a new progress bar.
   #
-  def create_progressbar start, total, options = {}
+  def create_progressbar start, total, options = {}, title = "PROGRESS"
     return nil if options[:piped] || options[:verbose]
     start = start.count rescue start
     total = total.count rescue total
+    padding = title.length > 12 ? "" : " " * (12 - title.length)
     ProgressBar.create({
       starting_at: start, total: total,
-      title: "Completed", format: "%a | %b>>%i | %c/%C %t"
+      title: title, format: "#{padding}%t  %c/%C |%b>>%i| %a"
     })
   end
 

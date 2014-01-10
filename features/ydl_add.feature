@@ -9,9 +9,9 @@ Feature: Add videos to the database
 
 	Scenario: Single video by URL without piping support
 		When  I add a video named "phir se"
-		Then  the output should match /Adding.*Completed.*Added/
+		Then  the output should match /Adding.*PROGRESS.*Added/
 		And   the output should contain "Adding 1 video"
-		And   the output should contain "Completed: |="
+		And   the output should contain "PROGRESS: |="
 		And   the output should contain "Added 1 video"
 		And   a cache file with metadata for the video should exist
 		And   the database file for fuzzy matching of videos should exist
@@ -20,7 +20,7 @@ Feature: Add videos to the database
 	Scenario: Adding multiple videos
 		When  I add videos named "phir se; aur ho; tum ho"
 		Then  the output should contain "Adding 3 video"
-		And   the output should contain "Completed: |="
+		And   the output should contain "PROGRESS: |="
 		And   the output should contain "Added 3 video"
 		And   cache files with metadata for the videos should exist
 		And   records for the videos should exist in the database
